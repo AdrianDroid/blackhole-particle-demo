@@ -35,16 +35,16 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     <button type="button" id="resetBtn">Reset</button>
     <button type="button" id="shotBtn" class="primary">Download</button>
   </div>
-  <p class="hint">Dark disk = event horizon. Bright ring = photon ring — some particles skim it before falling in.</p>
+  <p class="hint">Dark disk = event horizon. Bright ring at 1.5 Rh = photon sphere analog — some particles skim it before falling in.</p>
 </div>
 <div class="fps" id="fps">— fps</div>
 <canvas id="c"></canvas>
 <script>
 (() => {
   const soft = 22;
-  const Rh = soft * Math.SQRT2;       // event horizon
-  const Rgamma = 2.5 * Rh;            // photon ring (~2.5 Rh)
-  const ringHalf = Rh * 0.28;         // skim band width
+  const Rh = soft * Math.SQRT2;       // event horizon analog
+  const Rgamma = 1.5 * Rh;            // Schwarzschild: 3GM/c^2 vs 2GM/c^2
+  const ringHalf = 0.1 * Rh;          // skim band delta ~ 0.1 Rh
 
   function createParticle(x, y, rng = Math.random) {
     const ang = rng() * Math.PI * 2;
@@ -142,29 +142,33 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     const attractOn = mouse.active ? 1 : 0.35;
     const G = force * 55 * attractOn;
     const fMax = force * 8 * attractOn;
+    // circular bias scale ~ sqrt(k/R_gamma); k scales with G
+    const vCirc = Math.sqrt(Math.max(G * 0.002, 1e-6) / Rgamma) * 60;
     const next = new Array(particles.length);
 
     for (let i = 0; i < particles.length; i++) {
       let p = particles[i];
-      const dx = mx - p.x, dy = my - p.y; // toward cursor
+      const dx = mx - p.x, dy = my - p.y;
       const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4;
-      const tx = -dy / dist, ty = dx / dist; // tangential
+      const tx = -dy / dist, ty = dx / dist;
 
+      // Inward Plummer always dominant outside skim tweaks
       const { fx, fy } = plummerToward(dx, dy, G, fMax);
       p.vx += fx * dt;
       p.vy += fy * dt;
 
-      // Photon-ring skim band: temporary angular lock, radial still inward-biased
       const ringDist = Math.abs(dist - Rgamma);
       if (attractOn > 0.5 && ringDist < ringHalf) {
         const w = 1 - ringDist / ringHalf;
-        const ringBoost = force * 0.045 * w * w;
-        p.vx += tx * ringBoost * dt;
-        p.vy += ty * ringBoost * dt;
-        // damp radial drift slightly so they trace the ring briefly
+        // mild unstable circular bias: nudge tangential speed toward vCirc
+        const vTang = p.vx * tx + p.vy * ty;
+        const dv = (vCirc - vTang) * 0.12 * w;
+        p.vx += tx * dv * dt * 60;
+        p.vy += ty * dv * dt * 60;
+        // light radial damping so they trace briefly (unstable — Plummer still wins)
         const radial = ((p.x - mx) * p.vx + (p.y - my) * p.vy) / dist;
-        p.vx -= (p.x - mx) / dist * radial * 0.08 * w;
-        p.vy -= (p.y - my) / dist * radial * 0.08 * w;
+        p.vx -= (p.x - mx) / dist * radial * 0.06 * w;
+        p.vy -= (p.y - my) / dist * radial * 0.06 * w;
         p.ringT = Math.min(1, (p.ringT || 0) + dt * 3);
       } else {
         p.ringT = Math.max(0, (p.ringT || 0) - dt * 2);
@@ -190,32 +194,29 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
 
   function drawHole(mx, my) {
     ctx.globalCompositeOperation = 'source-over';
-    // accretion glow outside photon ring
-    const glow = ctx.createRadialGradient(mx, my, Rh, mx, my, Rgamma * 1.35);
+    const glow = ctx.createRadialGradient(mx, my, Rh, mx, my, Rgamma * 1.6);
     glow.addColorStop(0, 'rgba(20,10,40,0.15)');
     glow.addColorStop(0.55, 'rgba(120,80,255,0.12)');
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(mx, my, Rgamma * 1.35, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx, my, Rgamma * 1.6, 0, Math.PI * 2); ctx.fill();
 
-    // photon ring (bright)
     ctx.save();
     ctx.shadowColor = 'rgba(255, 210, 140, 0.85)';
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255, 220, 160, 0.9)';
-    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = 'rgba(255, 220, 160, 0.92)';
+    ctx.lineWidth = 2.2;
     ctx.arc(mx, my, Rgamma, 0, Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.lineWidth = 1;
     ctx.arc(mx, my, Rgamma, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
 
-    // event horizon disk (dark, opaque)
     ctx.beginPath();
     ctx.fillStyle = '#000';
     ctx.arc(mx, my, Rh, 0, Math.PI * 2);
