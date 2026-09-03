@@ -35,26 +35,27 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     <button type="button" id="resetBtn">Reset</button>
     <button type="button" id="shotBtn" class="primary">Download</button>
   </div>
-  <p class="hint">Move to pull inward (Plummer). Particles shrink into the horizon, then respawn far out.</p>
+  <p class="hint">Dark disk = event horizon. Bright ring = photon ring — some particles skim it before falling in.</p>
 </div>
 <div class="fps" id="fps">— fps</div>
 <canvas id="c"></canvas>
 <script>
 (() => {
   const soft = 22;
-  const Rh = soft * Math.SQRT2; // ~31
+  const Rh = soft * Math.SQRT2;       // event horizon
+  const Rgamma = 2.5 * Rh;            // photon ring (~2.5 Rh)
+  const ringHalf = Rh * 0.28;         // skim band width
 
   function createParticle(x, y, rng = Math.random) {
     const ang = rng() * Math.PI * 2;
-    const spd = 0.25 + rng() * 1.4; // calmer start so attract wins
-    return { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 0.45 + rng() * 0.85 };
+    const spd = 0.25 + rng() * 1.4;
+    return { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 0.45 + rng() * 0.85, ringT: 0 };
   }
   function createParticles(n, W, H) {
     const out = [];
     for (let i = 0; i < n; i++) out.push(createParticle(Math.random() * W, Math.random() * H));
     return out;
   }
-  // F on particle toward attractor: +G * (attractor - p) / (r^2+eps^2)^{3/2}
   function plummerToward(dx, dy, G, fMax) {
     const soft2 = soft * soft;
     const dist2 = dx * dx + dy * dy;
@@ -65,7 +66,7 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     return { fx, fy };
   }
   function spawnOutside(mx, my, W, H) {
-    const minR = 3 * Rh;
+    const minR = 3.2 * Rh;
     for (let a = 0; a < 32; a++) {
       const ang = Math.random() * Math.PI * 2;
       const rad = minR + Math.random() * Math.max(minR, Math.min(W, H) * 0.3);
@@ -74,7 +75,8 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     }
     return createParticle(Math.random() * W, Math.random() < 0.5 ? 0 : H);
   }
-  function colorFor(speed, dist) {
+  function colorFor(speed, dist, ringT) {
+    if (ringT > 0) return `hsl(${45 + ringT * 20} ${85}% ${60 + ringT * 15}%)`;
     const s = Math.min(speed / 14, 1);
     const d = Math.max(0, 1 - dist / 380);
     const t = Math.min(1, s * 0.5 + d * 0.5);
@@ -138,30 +140,46 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     const mx = mouse.active ? mouse.x : W * 0.5;
     const my = mouse.active ? mouse.y : H * 0.5;
     const attractOn = mouse.active ? 1 : 0.35;
-    // Stronger inward pull so attract clearly beats swirl / initial v
     const G = force * 55 * attractOn;
     const fMax = force * 8 * attractOn;
     const next = new Array(particles.length);
+
     for (let i = 0; i < particles.length; i++) {
       let p = particles[i];
-      // vector FROM particle TO attractor (inward)
-      const dx = mx - p.x, dy = my - p.y;
+      const dx = mx - p.x, dy = my - p.y; // toward cursor
       const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4;
+      const tx = -dy / dist, ty = dx / dist; // tangential
+
       const { fx, fy } = plummerToward(dx, dy, G, fMax);
       p.vx += fx * dt;
       p.vy += fy * dt;
-      // Mild swirl only — bias attract over tangential
-      if (dist < 160 && dist > Rh * 0.85) {
-        const swirl = (1 - dist / 160) * force * 0.012 * attractOn;
-        p.vx += (-dy / dist) * swirl * dt;
-        p.vy += (dx / dist) * swirl * dt;
+
+      // Photon-ring skim band: temporary angular lock, radial still inward-biased
+      const ringDist = Math.abs(dist - Rgamma);
+      if (attractOn > 0.5 && ringDist < ringHalf) {
+        const w = 1 - ringDist / ringHalf;
+        const ringBoost = force * 0.045 * w * w;
+        p.vx += tx * ringBoost * dt;
+        p.vy += ty * ringBoost * dt;
+        // damp radial drift slightly so they trace the ring briefly
+        const radial = ((p.x - mx) * p.vx + (p.y - my) * p.vy) / dist;
+        p.vx -= (p.x - mx) / dist * radial * 0.08 * w;
+        p.vy -= (p.y - my) / dist * radial * 0.08 * w;
+        p.ringT = Math.min(1, (p.ringT || 0) + dt * 3);
+      } else {
+        p.ringT = Math.max(0, (p.ringT || 0) - dt * 2);
+        if (dist < 160 && dist > Rh * 0.9) {
+          const swirl = (1 - dist / 160) * force * 0.01 * attractOn;
+          p.vx += tx * swirl * dt;
+          p.vy += ty * swirl * dt;
+        }
       }
+
       p.vx *= 0.985; p.vy *= 0.985;
       p.x += p.vx * dt * 60; p.y += p.vy * dt * 60;
       if (p.x < -20) p.x = W + 20; else if (p.x > W + 20) p.x = -20;
       if (p.y < -20) p.y = H + 20; else if (p.y > H + 20) p.y = -20;
 
-      // Absorb only after clearly inside horizon
       if (mouse.active && Math.hypot(p.x - mx, p.y - my) < Rh * 0.92) {
         p = spawnOutside(mx, my, W, H);
       }
@@ -170,32 +188,65 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     particles = next;
   }
 
+  function drawHole(mx, my) {
+    ctx.globalCompositeOperation = 'source-over';
+    // accretion glow outside photon ring
+    const glow = ctx.createRadialGradient(mx, my, Rh, mx, my, Rgamma * 1.35);
+    glow.addColorStop(0, 'rgba(20,10,40,0.15)');
+    glow.addColorStop(0.55, 'rgba(120,80,255,0.12)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(mx, my, Rgamma * 1.35, 0, Math.PI * 2); ctx.fill();
+
+    // photon ring (bright)
+    ctx.save();
+    ctx.shadowColor = 'rgba(255, 210, 140, 0.85)';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255, 220, 160, 0.9)';
+    ctx.lineWidth = 2.4;
+    ctx.arc(mx, my, Rgamma, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.arc(mx, my, Rgamma, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // event horizon disk (dark, opaque)
+    ctx.beginPath();
+    ctx.fillStyle = '#000';
+    ctx.arc(mx, my, Rh, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(80, 60, 120, 0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.arc(mx, my, Rh, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
   function draw() {
     const r = parseInt(bg.slice(1, 3), 16), g = parseInt(bg.slice(3, 5), 16), b = parseInt(bg.slice(5, 7), 16);
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = `rgba(${r},${g},${b},0.2)`;
     ctx.fillRect(0, 0, W, H);
+
+    const mx = mouse.active ? mouse.x : W * 0.5;
+    const my = mouse.active ? mouse.y : H * 0.5;
+    if (mouse.active) drawHole(mx, my);
+
     ctx.globalCompositeOperation = 'lighter';
     for (const p of particles) {
       const speed = Math.hypot(p.vx, p.vy);
-      const dist = mouse.active ? Math.hypot(mouse.x - p.x, mouse.y - p.y) : 200;
-      const col = colorFor(speed, dist);
+      const dist = mouse.active ? Math.hypot(mx - p.x, my - p.y) : 200;
+      const col = colorFor(speed, dist, p.ringT || 0);
       const len = Math.min(14, 2 + speed * 1.8);
       const nx = speed > 0.05 ? p.vx / speed : 0, ny = speed > 0.05 ? p.vy / speed : 0;
       ctx.beginPath(); ctx.strokeStyle = col; ctx.lineWidth = Math.max(0.5, p.r * 0.9); ctx.lineCap = 'round';
       ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - nx * len, p.y - ny * len); ctx.stroke();
       ctx.beginPath(); ctx.fillStyle = col; ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
-    }
-    if (mouse.active) {
-      ctx.globalCompositeOperation = 'source-over';
-      const grd = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, Rh * 1.6);
-      grd.addColorStop(0, 'rgba(0,0,0,0.8)');
-      grd.addColorStop(0.4, 'rgba(40,20,80,0.28)');
-      grd.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(mouse.x, mouse.y, Rh * 1.6, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.strokeStyle = 'rgba(180,160,255,0.45)'; ctx.lineWidth = 1.25;
-      ctx.arc(mouse.x, mouse.y, Rh, 0, Math.PI * 2); ctx.stroke();
     }
   }
 
