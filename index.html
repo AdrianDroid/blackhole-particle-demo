@@ -35,7 +35,7 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     <button type="button" id="resetBtn">Reset</button>
     <button type="button" id="shotBtn" class="primary">Download</button>
   </div>
-  <p class="hint">Photon ring is trail-built only — hold the cursor still; some particles should arc around before falling in.</p>
+  <p class="hint">No painted ring — sparse orbiters leave curved trails that build (and fade) around 1.5 Rh.</p>
 </div>
 <div class="fps" id="fps">— fps</div>
 <canvas id="c"></canvas>
@@ -44,9 +44,9 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
   const soft = 22;
   const Rh = soft * Math.SQRT2;
   const Rgamma = 1.5 * Rh;
-  const ringHalf = 0.22 * Rh; // thicker capture band
+  const ringHalf = 0.18 * Rh;
   const VMAX = 7.5;
-  const ORBIT_V = 3.4; // visible tangential speed (under VMAX)
+  const ORBIT_V = 3.2;
 
   function createParticle(x, y, rng = Math.random) {
     const ang = rng() * Math.PI * 2;
@@ -56,7 +56,7 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
 
   function makeOrbiter(mx, my, W, H, rng = Math.random) {
     const ang = rng() * Math.PI * 2;
-    const rad = Rgamma + (rng() - 0.5) * ringHalf * 0.6;
+    const rad = Rgamma + (rng() - 0.5) * ringHalf * 0.7;
     const x = mx + Math.cos(ang) * rad;
     const y = my + Math.sin(ang) * rad;
     if (x < 0 || x > W || y < 0 || y > H) return null;
@@ -65,7 +65,7 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     p.orbitSign = rng() < 0.5 ? 1 : -1;
     p.vx = tx * ORBIT_V * p.orbitSign;
     p.vy = ty * ORBIT_V * p.orbitSign;
-    p.ringT = 0.6;
+    p.ringT = 0.35;
     return p;
   }
 
@@ -91,8 +91,8 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
   }
 
   function spawnOutside(mx, my, W, H) {
-    // Majority of absorbs re-seed as orbiters so arcs keep appearing
-    if (Math.random() < 0.55) {
+    // Sparse orbit reseed — enough for arcs, not a solid ring
+    if (Math.random() < 0.22) {
       const o = makeOrbiter(mx, my, W, H);
       if (o) return o;
     }
@@ -111,7 +111,8 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
   }
 
   function colorFor(speed, dist, ringT) {
-    if (ringT > 0.12) return `hsl(${40 + ringT * 28} ${92}% ${60 + ringT * 16}%)`;
+    // Warm but not near-white — avoids “painted outline” look when arcs stack
+    if (ringT > 0.12) return `hsl(${28 + ringT * 18} ${78}% ${48 + ringT * 10}%)`;
     const s = Math.min(speed / VMAX, 1);
     const d = Math.max(0, 1 - dist / 380);
     const t = Math.min(1, s * 0.5 + d * 0.5);
@@ -179,16 +180,14 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
     const G = force * 42 * attractOn;
     const fMax = force * 3.2 * attractOn;
 
-    // Periodically convert a few field particles into orbiters while cursor is held
+    // Sparse inject: 1 orbiter every ~0.85s
     if (mouse.active) {
       orbitInject += dt;
-      if (orbitInject > 0.35 && particles.length > 0) {
+      if (orbitInject > 0.85 && particles.length > 0) {
         orbitInject = 0;
-        for (let k = 0; k < 4; k++) {
-          const idx = (Math.random() * particles.length) | 0;
-          const o = makeOrbiter(mx, my, W, H);
-          if (o) particles[idx] = o;
-        }
+        const idx = (Math.random() * particles.length) | 0;
+        const o = makeOrbiter(mx, my, W, H);
+        if (o) particles[idx] = o;
       }
     }
 
@@ -203,38 +202,34 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
       const ringDist = Math.abs(dist - Rgamma);
       const inRing = attractOn > 0.5 && ringDist < ringHalf;
 
-      // Outside band: full Plummer suck-in. Inside: almost pure circular guide.
-      const gScale = inRing ? 0.08 : 1;
+      const gScale = inRing ? 0.1 : 1;
       const { fx, fy } = plummerToward(dx, dy, G * gScale, fMax * gScale);
       p.vx += fx * dt;
       p.vy += fy * dt;
 
       if (inRing) {
         const w = 1 - ringDist / ringHalf;
-        // Soft pin radius onto R_gamma
         const err = dist - Rgamma;
-        p.vx -= rx * err * 2.2 * w;
-        p.vy -= ry * err * 2.2 * w;
-        // Force tangential circular motion (emergent trail ring)
+        p.vx -= rx * err * 2.0 * w;
+        p.vy -= ry * err * 2.0 * w;
         const sign = p.orbitSign || 1;
-        p.vx = p.vx * (1 - 0.75 * w) + tx * ORBIT_V * sign * (0.75 * w);
-        p.vy = p.vy * (1 - 0.75 * w) + ty * ORBIT_V * sign * (0.75 * w);
-        // Kill radial velocity
+        p.vx = p.vx * (1 - 0.7 * w) + tx * ORBIT_V * sign * (0.7 * w);
+        p.vy = p.vy * (1 - 0.7 * w) + ty * ORBIT_V * sign * (0.7 * w);
         const vRad = p.vx * rx + p.vy * ry;
-        p.vx -= rx * vRad * (0.85 * w);
-        p.vy -= ry * vRad * (0.85 * w);
-        p.ringT = Math.min(1, (p.ringT || 0) + dt * 3);
-        // Rare decay so they eventually fall or escape (unstable)
-        if (Math.random() < 0.004 * w) {
-          p.vx += rx * (Math.random() - 0.35) * 1.2;
-          p.ringT *= 0.3;
+        p.vx -= rx * vRad * (0.8 * w);
+        p.vy -= ry * vRad * (0.8 * w);
+        p.ringT = Math.min(1, (p.ringT || 0) + dt * 2.2);
+        // Decay often enough that arcs stay incomplete (not a solid circle)
+        if (Math.random() < 0.012 * w) {
+          p.vx += rx * (Math.random() - 0.3) * 1.4;
+          p.ringT *= 0.25;
         }
       } else {
-        p.ringT = Math.max(0, (p.ringT || 0) - dt * 1.2);
+        p.ringT = Math.max(0, (p.ringT || 0) - dt * 1.6);
       }
 
-      p.vx *= inRing ? 0.995 : 0.988;
-      p.vy *= inRing ? 0.995 : 0.988;
+      p.vx *= inRing ? 0.994 : 0.988;
+      p.vy *= inRing ? 0.994 : 0.988;
       clampSpeed(p);
       p.x += p.vx * dt * 60; p.y += p.vy * dt * 60;
       if (p.x < -20) p.x = W + 20; else if (p.x > W + 20) p.x = -20;
@@ -249,24 +244,21 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
   }
 
   function drawHole(mx, my) {
+    // Soft black disk only — no stroke, no bright rim
     ctx.globalCompositeOperation = 'source-over';
-    const softGlow = ctx.createRadialGradient(mx, my, Rh * 0.2, mx, my, Rh * 1.8);
-    softGlow.addColorStop(0, 'rgba(0,0,0,0.85)');
-    softGlow.addColorStop(0.55, 'rgba(30,15,50,0.25)');
+    const softGlow = ctx.createRadialGradient(mx, my, 0, mx, my, Rh * 1.35);
+    softGlow.addColorStop(0, 'rgba(0,0,0,0.95)');
+    softGlow.addColorStop(0.7, 'rgba(0,0,0,0.75)');
     softGlow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = softGlow;
-    ctx.beginPath(); ctx.arc(mx, my, Rh * 1.8, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath();
-    ctx.fillStyle = '#000';
-    ctx.arc(mx, my, Rh, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(mx, my, Rh * 1.35, 0, Math.PI * 2); ctx.fill();
   }
 
   function draw() {
     const r = parseInt(bg.slice(1, 3), 16), g = parseInt(bg.slice(3, 5), 16), b = parseInt(bg.slice(5, 7), 16);
     ctx.globalCompositeOperation = 'source-over';
-    // Slightly longer persistence so orbit arcs stack into a ring
-    ctx.fillStyle = `rgba(${r},${g},${b},0.16)`;
+    // Faster fade so arcs don’t stack into a static outline
+    ctx.fillStyle = `rgba(${r},${g},${b},0.24)`;
     ctx.fillRect(0, 0, W, H);
 
     const mx = mouse.active ? mouse.x : W * 0.5;
@@ -279,10 +271,10 @@ button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)
       const dist = mouse.active ? Math.hypot(mx - p.x, my - p.y) : 200;
       const col = colorFor(speed, dist, p.ringT || 0);
       const orbiting = (p.ringT || 0) > 0.2;
-      const len = orbiting ? Math.min(16, 4 + speed * 2.2) : Math.min(9, 1.5 + speed * 1.1);
+      const len = orbiting ? Math.min(11, 3 + speed * 1.4) : Math.min(8, 1.5 + speed * 1.0);
       const nx = speed > 0.04 ? p.vx / speed : 0, ny = speed > 0.04 ? p.vy / speed : 0;
       ctx.beginPath(); ctx.strokeStyle = col;
-      ctx.lineWidth = Math.max(0.45, p.r * (orbiting ? 1.15 : 0.85));
+      ctx.lineWidth = Math.max(0.4, p.r * (orbiting ? 0.95 : 0.8));
       ctx.lineCap = 'round';
       ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - nx * len, p.y - ny * len); ctx.stroke();
       ctx.beginPath(); ctx.fillStyle = col; ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
