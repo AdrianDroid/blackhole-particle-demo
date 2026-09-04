@@ -1,1 +1,190 @@
-file:///tmp/only_content.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WebGL Photon Black Hole</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:system-ui,sans-serif}
+#c{display:block;width:100%;height:100%;cursor:none;touch-action:none}
+#ui{position:fixed;left:12px;top:12px;z-index:10;background:rgba(12,14,22,.82);color:#e8ecf4;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);min-width:220px;font-size:12px;line-height:1.4;user-select:none;backdrop-filter:blur(8px)}
+#ui h1{font-size:13px;font-weight:600;margin-bottom:8px;color:#9ecbff}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0}
+.row label{flex:0 0 62px;opacity:.85}
+.row input[type=range]{flex:1}
+.row .val{flex:0 0 42px;text-align:right;font-variant-numeric:tabular-nums}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+button,input[type=color]{appearance:none;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#e8ecf4;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer}
+button:hover{background:rgba(255,255,255,.16)}
+input[type=color]{padding:2px;width:36px;height:28px}
+.hint{margin-top:8px;opacity:.55;font-size:11px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+<h1>Photon Black Hole</h1>
+<div class="row"><label for="n">Photons</label><input id="n" type="range" min="500" max="20000" step="100" value="6000"/><span class="val" id="nVal">6000</span></div>
+<div class="row"><label for="force">Force</label><input id="force" type="range" min="0.2" max="4" step="0.05" value="1.2"/><span class="val" id="forceVal">1.20</span></div>
+<div class="row"><label for="bg">Background</label><input id="bg" type="color" value="#05070c"/></div>
+<div class="btns"><button id="clear" type="button">Clear</button><button id="reset" type="button">Reset</button><button id="png" type="button">Download PNG</button></div>
+<div class="hint">Move cursor — soft Plummer pull, constant |v|</div>
+</div>
+<script>
+(function(){
+'use strict';
+const canvas=document.getElementById('c');
+const gl=canvas.getContext('webgl2',{alpha:false,antialias:false,preserveDrawingBuffer:true});
+if(!gl){document.body.innerHTML='<p style="color:#fff;padding:2rem">WebGL2 required.</p>';return;}
+const MAX_N=20000,TEX_SIZE=Math.ceil(Math.sqrt(MAX_N)),TEX_CAP=TEX_SIZE*TEX_SIZE;
+gl.getExtension('EXT_color_buffer_float');
+gl.getExtension('EXT_float_blend');
+let stateInternal=gl.RGBA16F,stateType=gl.HALF_FLOAT;
+(function(){
+  const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,4,4,0,gl.RGBA,gl.HALF_FLOAT,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+  let ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+  if(!ok){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,4,4,0,gl.RGBA,gl.FLOAT,null);
+    ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+    if(ok){stateInternal=gl.RGBA32F;stateType=gl.FLOAT;}}
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.deleteFramebuffer(f);gl.deleteTexture(t);
+  if(!ok)throw new Error('no float FBO');
+})();
+function compile(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+function link(vs,fs){const p=gl.createProgram();gl.attachShader(p,compile(gl.VERTEX_SHADER,vs));
+  gl.attachShader(p,compile(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));return p;}
+function U(p,n){return gl.getUniformLocation(p,n);}
+const VS_FULL=`#version 300 es
+precision highp float;
+const vec2 P[3]=vec2[3](vec2(-1,-1),vec2(3,-1),vec2(-1,3));
+out vec2 vUv;void main(){vec2 p=P[gl_VertexID];vUv=p*.5+.5;gl_Position=vec4(p,0,1);}`;
+const FS_UPDATE=`#version 300 es
+precision highp float;
+in vec2 vUv;uniform sampler2D uState;uniform vec2 uRes,uBH,uSeed;
+uniform float uDt,uForce,uEps,uRh,uC,uSwirl,uTime,uCount,uTexSize;out vec4 o;
+float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+vec2 h22(vec2 p){return vec2(h21(p),h21(p+17.13));}
+vec4 spawn(float id,float t){vec2 h=h22(vec2(id*.0013+uSeed.x,t*.17+uSeed.y+id*.0007));
+  vec2 pos=h*uRes;float a=h21(vec2(id*.0021+t,uSeed.x+3.1))*6.2831853;return vec4(pos,vec2(cos(a),sin(a))*uC);}
+void main(){float id=floor(gl_FragCoord.y)*uTexSize+floor(gl_FragCoord.x);
+  if(id>=uCount){o=vec4(0);return;}
+  vec4 s=texture(uState,vUv);vec2 pos=s.xy,vel=s.zw;
+  if(pos==vec2(0)&&vel==vec2(0)){o=spawn(id,uTime+1.);return;}
+  vec2 r=uBH-pos;float r2=dot(r,r);float soft=r2+uEps*uEps;float inv=inversesqrt(soft);float inv3=inv*inv*inv;
+  vec2 a=uForce*r*inv3;float dist=sqrt(r2+1e-6);vec2 tang=vec2(-r.y,r.x)*inv;
+  a+=tang*(uSwirl*uForce*(uEps/(dist+uEps))*inv);
+  vel+=a*uDt;float sp=length(vel);
+  if(sp>1e-6)vel=normalize(vel)*uC;else{float ang=h21(vec2(id,uTime))*6.2831853;vel=vec2(cos(ang),sin(ang))*uC;}
+  pos+=vel*uDt;
+  if(distance(pos,uBH)<uRh){o=spawn(id,uTime+id*.001);return;}
+  pos=mod(pos,uRes);if(pos.x<0.)pos.x+=uRes.x;if(pos.y<0.)pos.y+=uRes.y;o=vec4(pos,vel);}`;
+const VS_POINTS=`#version 300 es
+precision highp float;uniform sampler2D uState;uniform vec2 uRes,uBH;uniform float uTexSize,uCount,uPointSize;
+out float vTurn,vDist,vAlive;
+void main(){float id=float(gl_VertexID);vAlive=id<uCount?1.:0.;
+  if(vAlive<.5){gl_Position=vec4(2,2,0,1);gl_PointSize=0.;vTurn=0.;vDist=0.;return;}
+  float x=mod(id,uTexSize),y=floor(id/uTexSize);vec4 s=texelFetch(uState,ivec2(int(x),int(y)),0);
+  vec2 pos=s.xy,vel=s.zw,toBH=uBH-pos;float dist=length(toBH);
+  vec2 radial=dist>1e-3?toBH/dist:vec2(1,0);vec2 tang=vec2(-radial.y,radial.x);
+  vec2 dir=vel/max(length(vel),1e-6);vTurn=abs(dot(dir,tang));vDist=dist;
+  vec2 ndc=(pos/uRes)*2.-1.;ndc.y=-ndc.y;gl_Position=vec4(ndc,0,1);gl_PointSize=uPointSize;}`;
+const FS_POINTS=`#version 300 es
+precision mediump float;in float vTurn,vDist,vAlive;uniform float uRh;out vec4 fc;
+void main(){if(vAlive<.5)discard;vec2 pc=gl_PointCoord*2.-1.;float d=dot(pc,pc);if(d>1.)discard;
+  float soft=exp(-d*2.2),near=clamp(1.-vDist/(uRh*18.),0.,1.);
+  vec3 col=mix(vec3(.35,.75,1),vec3(.55,.45,1),clamp(vTurn*1.4+near*.5,0.,1.));
+  col=mix(col,vec3(1,.55,.25),near*(.35+.65*vTurn));float a=soft*(.35+.55*near+.25*vTurn);fc=vec4(col*a,a);}`;
+const FS_FADE=`#version 300 es
+precision mediump float;uniform float uFade;out vec4 fc;void main(){fc=vec4(0,0,0,uFade);}`;
+const FS_COMP=`#version 300 es
+precision mediump float;in vec2 vUv;uniform sampler2D uTrail;uniform vec3 uBg;uniform vec2 uBH,uRes;uniform float uRh;out vec4 fc;
+void main(){vec4 t=texture(uTrail,vUv);vec3 col=uBg*(1.-clamp(t.a,0.,1.))+t.rgb;
+  vec2 pix=vec2(vUv.x*uRes.x,(1.-vUv.y)*uRes.y);float d=distance(pix,uBH);
+  float disk=smoothstep(uRh*1.35,uRh*.55,d);col*=(1.-disk*.92);
+  float rim=smoothstep(uRh*1.6,uRh*1.2,d)*smoothstep(uRh*.7,uRh*1.15,d);
+  col=mix(col,col*.15,rim*.35);fc=vec4(col,1);}`;
+const progUpdate=link(VS_FULL,FS_UPDATE),progFade=link(VS_FULL,FS_FADE),progPoints=link(VS_POINTS,FS_POINTS),progComp=link(VS_FULL,FS_COMP);
+const uUp={state:U(progUpdate,'uState'),res:U(progUpdate,'uRes'),bh:U(progUpdate,'uBH'),dt:U(progUpdate,'uDt'),force:U(progUpdate,'uForce'),eps:U(progUpdate,'uEps'),rh:U(progUpdate,'uRh'),c:U(progUpdate,'uC'),swirl:U(progUpdate,'uSwirl'),time:U(progUpdate,'uTime'),count:U(progUpdate,'uCount'),texSize:U(progUpdate,'uTexSize'),seed:U(progUpdate,'uSeed')};
+const uFade={fade:U(progFade,'uFade')};
+const uPts={state:U(progPoints,'uState'),res:U(progPoints,'uRes'),bh:U(progPoints,'uBH'),texSize:U(progPoints,'uTexSize'),count:U(progPoints,'uCount'),ps:U(progPoints,'uPointSize'),rh:U(progPoints,'uRh')};
+const uComp={trail:U(progComp,'uTrail'),bg:U(progComp,'uBg'),bh:U(progComp,'uBH'),res:U(progComp,'uRes'),rh:U(progComp,'uRh')};
+function makeTex(w,h,data){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D,0,stateInternal,w,h,0,gl.RGBA,stateType,data||null);return t;}
+function makeFBO(tex){const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('FBO');
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);return f;}
+function makeTrail(w,h){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);return t;}
+const vao=gl.createVertexArray();gl.bindVertexArray(vao);
+let pingTex,pongTex,pingFBO,pongFBO,trailTex,trailFBO,readPing=true;
+const params={n:6000,force:1.2,eps:28,rh:14,c:2.8,swirl:.55,fade:.92,bg:[5/255,7/255,12/255]};
+let lastBH={x:0,y:0},randSeed=[Math.random()*1000,Math.random()*1000],time=0,needResize=true,mouseActive=false;
+function rebuildState(){
+  const data=new Float32Array(TEX_CAP*4),W=canvas.width||1,H=canvas.height||1;
+  for(let i=0;i<params.n;i++){const o=i*4,ang=Math.random()*Math.PI*2;data[o]=Math.random()*W;data[o+1]=Math.random()*H;data[o+2]=Math.cos(ang)*params.c;data[o+3]=Math.sin(ang)*params.c;}
+  if(pingTex){gl.deleteTexture(pingTex);gl.deleteTexture(pongTex);gl.deleteFramebuffer(pingFBO);gl.deleteFramebuffer(pongFBO);}
+  pingTex=makeTex(TEX_SIZE,TEX_SIZE,null);pongTex=makeTex(TEX_SIZE,TEX_SIZE,null);
+  gl.bindTexture(gl.TEXTURE_2D,pingTex);
+  try{gl.texImage2D(gl.TEXTURE_2D,0,stateInternal,TEX_SIZE,TEX_SIZE,0,gl.RGBA,gl.FLOAT,data);}catch(e){}
+  pingFBO=makeFBO(pingTex);pongFBO=makeFBO(pongTex);readPing=true;
+}
+function rebuildTrail(){const w=canvas.width||1,h=canvas.height||1;
+  if(trailTex){gl.deleteTexture(trailTex);gl.deleteFramebuffer(trailFBO);}
+  trailTex=makeTrail(w,h);trailFBO=makeFBO(trailTex);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,trailFBO);gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
+function resize(){const dpr=Math.min(devicePixelRatio||1,1.5),w=Math.max(1,Math.floor(innerWidth*dpr)),h=Math.max(1,Math.floor(innerHeight*dpr));
+  if(canvas.width===w&&canvas.height===h&&!needResize)return;canvas.width=w;canvas.height=h;
+  if(!mouseActive){lastBH.x=w*.5;lastBH.y=h*.5;}rebuildTrail();needResize=false;}
+function ptr(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*canvas.width,y:(e.clientY-r.top)/r.height*canvas.height};}
+canvas.addEventListener('pointermove',e=>{const p=ptr(e);mouseActive=true;lastBH.x=p.x;lastBH.y=p.y;});
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);const p=ptr(e);mouseActive=true;lastBH.x=p.x;lastBH.y=p.y;});
+canvas.addEventListener('pointerleave',()=>{mouseActive=false;});
+canvas.addEventListener('pointerup',()=>{mouseActive=false;});
+const nEl=document.getElementById('n'),nVal=document.getElementById('nVal'),forceEl=document.getElementById('force'),forceVal=document.getElementById('forceVal'),bgEl=document.getElementById('bg');
+nEl.oninput=()=>{params.n=+nEl.value;nVal.textContent=params.n;};
+forceEl.oninput=()=>{params.force=+forceEl.value;forceVal.textContent=params.force.toFixed(2);};
+bgEl.oninput=()=>{const h=bgEl.value;params.bg=[parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255];};
+function clearTrail(){gl.bindFramebuffer(gl.FRAMEBUFFER,trailFBO);gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
+document.getElementById('clear').onclick=clearTrail;
+document.getElementById('reset').onclick=()=>{randSeed=[Math.random()*1000,Math.random()*1000];rebuildState();clearTrail();};
+document.getElementById('png').onclick=()=>{const a=document.createElement('a');a.download='photon-blackhole.png';a.href=canvas.toDataURL('image/png');a.click();};
+resize();rebuildState();addEventListener('resize',()=>{needResize=true;});
+let lastT=performance.now();
+function frame(now){requestAnimationFrame(frame);if(needResize){const ow=canvas.width;resize();if(!ow)rebuildState();}
+  const dtMs=Math.min(32,now-lastT);lastT=now;const dt=dtMs*.06;time+=dtMs*.001;
+  const W=canvas.width,H=canvas.height,bhX=lastBH.x,bhY=lastBH.y,n=params.n;
+  const readTex=readPing?pingTex:pongTex,writeFBO=readPing?pongFBO:pingFBO,writeTex=readPing?pongTex:pingTex;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,writeFBO);gl.viewport(0,0,TEX_SIZE,TEX_SIZE);gl.disable(gl.BLEND);
+  gl.useProgram(progUpdate);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,readTex);
+  gl.uniform1i(uUp.state,0);gl.uniform2f(uUp.res,W,H);gl.uniform2f(uUp.bh,bhX,bhY);gl.uniform1f(uUp.dt,dt);
+  gl.uniform1f(uUp.force,params.force*4000);gl.uniform1f(uUp.eps,params.eps);gl.uniform1f(uUp.rh,params.rh);
+  gl.uniform1f(uUp.c,params.c);gl.uniform1f(uUp.swirl,params.swirl);gl.uniform1f(uUp.time,time);
+  gl.uniform1f(uUp.count,n);gl.uniform1f(uUp.texSize,TEX_SIZE);gl.uniform2f(uUp.seed,randSeed[0],randSeed[1]);
+  gl.bindVertexArray(vao);gl.drawArrays(gl.TRIANGLES,0,3);readPing=!readPing;const stateTex=writeTex;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,trailFBO);gl.viewport(0,0,W,H);gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ZERO,gl.SRC_ALPHA);gl.useProgram(progFade);gl.uniform1f(uFade.fade,params.fade);gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(progPoints);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,stateTex);
+  gl.uniform1i(uPts.state,0);gl.uniform2f(uPts.res,W,H);gl.uniform2f(uPts.bh,bhX,bhY);gl.uniform1f(uPts.texSize,TEX_SIZE);
+  gl.uniform1f(uPts.count,n);gl.uniform1f(uPts.ps,Math.max(1.5,2.2*Math.min(devicePixelRatio||1,1.5)));gl.uniform1f(uPts.rh,params.rh);
+  gl.drawArrays(gl.POINTS,0,n);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);gl.disable(gl.BLEND);gl.useProgram(progComp);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,trailTex);gl.uniform1i(uComp.trail,0);
+  gl.uniform3fv(uComp.bg,params.bg);gl.uniform2f(uComp.bh,bhX,bhY);gl.uniform2f(uComp.res,W,H);gl.uniform1f(uComp.rh,params.rh);
+  gl.drawArrays(gl.TRIANGLES,0,3);}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
