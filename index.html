@@ -3,353 +3,490 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Black Hole Particle Field — Live Demo</title>
+<title>Schwarzschild Null Geodesic — Emergent Photon Ring</title>
 <style>
-:root{--panel:rgba(18,18,28,.85);--text:#e8e8f0;--muted:#9898b0;--accent:#7c5cff;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#0a0a12;color:var(--text);font-family:system-ui,sans-serif}
-canvas{display:block;width:100%;height:100%;cursor:none;touch-action:none}
-.panel{position:fixed;top:16px;left:16px;z-index:10;width:min(300px,calc(100vw - 32px));padding:14px 16px 16px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
-.panel h1{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
-.row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.row label{flex:0 0 72px;font-size:12px;color:var(--muted)}
-.row input[type=range]{flex:1;accent-color:var(--accent)}
-.row .val{flex:0 0 36px;font-size:12px;font-variant-numeric:tabular-nums;text-align:right}
-.row input[type=color]{width:36px;height:28px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer}
-.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-button{flex:1 1 auto;min-width:80px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.06);color:var(--text);font-size:12px;font-weight:500;cursor:pointer}
-button:hover{background:rgba(124,92,255,.25);border-color:rgba(124,92,255,.45)}
-button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)}
-.hint{margin-top:10px;font-size:11px;color:var(--muted);line-height:1.4}
-.fps{position:fixed;top:16px;right:16px;z-index:10;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 10px;backdrop-filter:blur(10px)}
+  :root {
+    --bg: #0a0a12;
+    --panel: rgba(18, 18, 28, 0.85);
+    --text: #e8e8f0;
+    --muted: #9898b0;
+    --accent: #7c5cff;
+    --border: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .panel {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    width: min(320px, calc(100vw - 32px));
+    padding: 14px 16px 16px;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  }
+  .panel h1 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .row label {
+    flex: 0 0 88px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+  .row .val {
+    flex: 0 0 40px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--text);
+  }
+  .row input[type="color"] {
+    width: 36px;
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+  }
+  .btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  button {
+    flex: 1 1 auto;
+    min-width: 80px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover {
+    background: rgba(124, 92, 255, 0.25);
+    border-color: rgba(124, 92, 255, 0.45);
+  }
+  button.primary {
+    background: rgba(124, 92, 255, 0.35);
+    border-color: rgba(124, 92, 255, 0.55);
+  }
+  .hint {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .fps {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    backdrop-filter: blur(10px);
+  }
 </style>
 </head>
 <body>
-<div class="panel">
-  <h1>Black Hole Field</h1>
-  <div class="row"><label for="count">Particles</label><input id="count" type="range" min="50" max="1200" step="10" value="300" /><span class="val" id="countVal">300</span></div>
-  <div class="row"><label for="force">Force</label><input id="force" type="range" min="5" max="100" step="1" value="55" /><span class="val" id="forceVal">55</span></div>
-  <div class="row"><label for="bg">Background</label><input id="bg" type="color" value="#0a0a12" /></div>
-  <div class="btns">
-    <button type="button" id="clearBtn">Clear</button>
-    <button type="button" id="resetBtn">Reset</button>
-    <button type="button" id="shotBtn" class="primary">Download</button>
+  <div class="panel">
+    <h1>Null Geodesic BH</h1>
+    <div class="row">
+      <label for="count">Particles</label>
+      <input id="count" type="range" min="40" max="800" step="10" value="220" />
+      <span class="val" id="countVal">220</span>
+    </div>
+    <div class="row">
+      <label for="nearCrit" title="Fraction of beams seeded with |b| ≈ bc">Near-crit %</label>
+      <input id="nearCrit" type="range" min="40" max="95" step="1" value="72" />
+      <span class="val" id="nearCritVal">72</span>
+    </div>
+    <div class="row">
+      <label for="simSpeed" title="Integration time scale">Sim speed</label>
+      <input id="simSpeed" type="range" min="20" max="160" step="5" value="70" />
+      <span class="val" id="simSpeedVal">70</span>
+    </div>
+    <div class="row">
+      <label for="bg">Background</label>
+      <input id="bg" type="color" value="#0a0a12" />
+    </div>
+    <div class="btns">
+      <button type="button" id="clearBtn">Clear</button>
+      <button type="button" id="resetBtn">Reset</button>
+      <button type="button" id="shotBtn" class="primary">Download PNG</button>
+    </div>
+    <p class="hint">Fixed BH at center. Photon ring emerges only from near-critical null paths (b ≈ bc) winding near Rγ = 3M — no painted ring, no orbit seeds.</p>
   </div>
-  <p class="hint">Few orbiters, history trails, no additive bloom — curved arcs without a stuck glowing rim.</p>
-</div>
-<div class="fps" id="fps">— fps</div>
-<canvas id="c"></canvas>
+  <div class="fps" id="fps">— fps</div>
+  <canvas id="c"></canvas>
 <script>
 (() => {
-  const soft = 22;
-  const Rh = soft * Math.SQRT2;
-  const Rgamma = 1.5 * Rh;
-  const ringHalf = 0.28 * Rh; // allow radius spread so arcs don’t coincide
-  const VMAX = 7.5;
-  const ORBIT_V = 3.0;
-  const MAX_ORBITERS = 5;
-  const TRAIL_LEN = 48; // long readable curve per orbiter
+  // --- Schwarzschild null analog (Math Master) ---
+  // Units: Rh = Rs = 2M, Rγ = 3M = 1.5 Rh
+  // Conserved L = X*vy - Y*vx (coords relative to BH)
+  // Veff(r) = L² (1 - Rs/r) / r²
+  // ṙ̈ = -∂Veff/∂r = L²/r⁴ (2r - 3 Rs)
+  // φ̇ = L / r²
+  // Absorb if r < Rh
+  // bc = 3√3 M
 
-  function createParticle(x, y, rng = Math.random) {
-    const ang = rng() * Math.PI * 2;
-    const spd = 0.15 + rng() * 0.9;
+  const M = 40;                 // geometric mass in px
+  const Rs = 2 * M;             // Rh = Rs
+  const Rh = Rs;
+  const Rgamma = 3 * M;         // unstable photon orbit
+  const bc = 3 * Math.sqrt(3) * M;
+  const E0 = 2.4;               // asymptotic "energy" / speed scale
+  const TRAIL_LEN = 64;
+  const FADE = 0.085;           // canvas fade per frame → trails accumulate ~10–30s
+
+  function rDdot(r, L) {
+    // ṙ̈ = L²/r⁴ (2r - 3 Rs)
+    if (r < 1e-6) return 0;
+    const L2 = L * L;
+    const r2 = r * r;
+    const r4 = r2 * r2;
+    return (L2 / r4) * (2 * r - 3 * Rs);
+  }
+
+  function sampleImpactParam(nearFrac) {
+    const u = Math.random();
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    let bAbs;
+    if (u < nearFrac) {
+      // mostly near-critical: [0.95, 1.05] bc
+      bAbs = (0.95 + Math.random() * 0.10) * bc;
+    } else if (u < nearFrac + (1 - nearFrac) * 0.45) {
+      // clearly capture: well below bc
+      bAbs = (0.35 + Math.random() * 0.50) * bc;
+    } else {
+      // clearly scatter: well above bc
+      bAbs = (1.12 + Math.random() * 0.70) * bc;
+    }
+    return sign * bAbs;
+  }
+
+  function spawnBeam(cx, cy, W, H, nearFrac) {
+    const b = sampleImpactParam(nearFrac);
+    // Start far left of BH as parallel beam: X=-r0, Y=b, vx≈+E, vy=0
+    const margin = Math.max(W, H) * 0.55;
+    const r0 = Math.max(margin, 8 * Rh);
+    const X = -r0;
+    const Y = b;
+    const E = E0 * (0.92 + Math.random() * 0.16);
+    const vx = E;
+    const vy = 0;
+    // L = X*vy - Y*vx = -b E  →  |b| = |L|/E
+    const L = X * vy - Y * vx;
     return {
-      x, y,
-      vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
-      r: 0.45 + rng() * 0.85,
-      ringT: 0,
-      orbitSign: rng() < 0.5 ? 1 : -1,
-      orbitR: Rgamma + (rng() - 0.5) * ringHalf,
+      x: cx + X,
+      y: cy + Y,
+      vx,
+      vy,
+      L,
+      b,
+      E,
+      r: 1.1 + Math.random() * 0.9,
       trail: [],
+      alive: true,
     };
   }
 
-  function countOrbiters(list) {
-    let n = 0;
-    for (const p of list) if ((p.ringT || 0) > 0.2) n++;
-    return n;
-  }
-
-  function makeOrbiter(mx, my, W, H, rng = Math.random) {
-    const ang = rng() * Math.PI * 2;
-    const orbitR = Rgamma + (rng() - 0.5) * ringHalf;
-    const x = mx + Math.cos(ang) * orbitR;
-    const y = my + Math.sin(ang) * orbitR;
-    if (x < 0 || x > W || y < 0 || y > H) return null;
-    const p = createParticle(x, y, rng);
-    const tx = -Math.sin(ang), ty = Math.cos(ang);
-    p.orbitSign = rng() < 0.5 ? 1 : -1;
-    p.orbitR = orbitR;
-    p.vx = tx * ORBIT_V * p.orbitSign;
-    p.vy = ty * ORBIT_V * p.orbitSign;
-    p.ringT = 0.4;
-    p.trail = [];
-    return p;
-  }
-
-  function createParticles(n, W, H) {
+  function createParticles(n, cx, cy, W, H, nearFrac) {
     const out = [];
-    for (let i = 0; i < n; i++) out.push(createParticle(Math.random() * W, Math.random() * H));
+    for (let i = 0; i < n; i++) out.push(spawnBeam(cx, cy, W, H, nearFrac));
     return out;
   }
 
-  function plummerToward(dx, dy, G, fMax) {
-    const soft2 = soft * soft;
-    const dist2 = dx * dx + dy * dy;
-    const denom = Math.pow(dist2 + soft2, 1.5);
-    let fx = (G * dx) / denom, fy = (G * dy) / denom;
-    const mag = Math.hypot(fx, fy);
-    if (fMax > 0 && mag > fMax) { const s = fMax / mag; fx *= s; fy *= s; }
-    return { fx, fy };
-  }
-
-  function clampSpeed(p) {
-    const s = Math.hypot(p.vx, p.vy);
-    if (s > VMAX) { const k = VMAX / s; p.vx *= k; p.vy *= k; }
-  }
-
-  function spawnOutside(mx, my, W, H, orbiterCount) {
-    if (orbiterCount < MAX_ORBITERS && Math.random() < 0.14) {
-      const o = makeOrbiter(mx, my, W, H);
-      if (o) return o;
-    }
-    const minR = 3.2 * Rh;
-    for (let a = 0; a < 32; a++) {
-      const ang = Math.random() * Math.PI * 2;
-      const rad = minR + Math.random() * Math.max(minR, Math.min(W, H) * 0.28);
-      const x = mx + Math.cos(ang) * rad, y = my + Math.sin(ang) * rad;
-      if (x >= 0 && x <= W && y >= 0 && y <= H) {
-        const p = createParticle(x, y);
-        clampSpeed(p);
-        return p;
-      }
-    }
-    return createParticle(Math.random() * W, Math.random() < 0.5 ? 8 : H - 8);
+  function colorForB(b) {
+    // warmer when |b - bc| is small
+    const db = Math.abs(Math.abs(b) - bc) / bc;
+    const t = Math.max(0, 1 - db / 0.18); // near-critical → 1
+    // cool blue → warm gold/orange
+    const h = 210 - t * 175;   // 210 → 35
+    const s = 55 + t * 40;
+    const l = 48 + t * 22;
+    return { h, s, l, t };
   }
 
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha: false });
   const countEl = document.getElementById('count');
-  const forceEl = document.getElementById('force');
+  const nearEl = document.getElementById('nearCrit');
+  const speedEl = document.getElementById('simSpeed');
   const countVal = document.getElementById('countVal');
-  const forceVal = document.getElementById('forceVal');
+  const nearVal = document.getElementById('nearCritVal');
+  const speedVal = document.getElementById('simSpeedVal');
   const bgEl = document.getElementById('bg');
   const fpsEl = document.getElementById('fps');
 
-  let W = 0, H = 0, dpr = 1, particles = [], force = +forceEl.value, bg = bgEl.value;
-  let mouse = { x: 0, y: 0, active: false };
+  let W = 0, H = 0, dpr = 1, particles = [];
+  let nearFrac = +nearEl.value / 100;
+  let simSpeed = +speedEl.value / 100; // multiplies dt
+  let bg = bgEl.value;
   let lastT = performance.now(), frames = 0, fpsAcc = 0;
-  let orbitInject = 0;
+
+  function bhCenter() {
+    return { cx: W * 0.5, cy: H * 0.5 };
+  }
 
   function resize() {
     dpr = Math.min(devicePixelRatio || 1, 2);
     W = innerWidth; H = innerHeight;
-    canvas.width = Math.floor(W * dpr); canvas.height = Math.floor(H * dpr);
-    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  function pointer(e) {
-    const t = e.touches ? e.touches[0] : e;
-    if (!t) return;
-    mouse.x = t.clientX; mouse.y = t.clientY; mouse.active = true;
-  }
+
   addEventListener('resize', resize);
-  addEventListener('pointermove', pointer, { passive: true });
-  addEventListener('pointerdown', pointer, { passive: true });
-  addEventListener('pointerleave', () => { mouse.active = false; });
-  addEventListener('touchstart', pointer, { passive: true });
-  addEventListener('touchmove', pointer, { passive: true });
-  addEventListener('touchend', () => { mouse.active = false; });
 
   countEl.oninput = () => {
     countVal.textContent = countEl.value;
     const n = +countEl.value;
+    const { cx, cy } = bhCenter();
     if (particles.length > n) particles.length = n;
-    while (particles.length < n) particles.push(createParticle(Math.random() * W, Math.random() * H));
+    while (particles.length < n) particles.push(spawnBeam(cx, cy, W, H, nearFrac));
   };
-  forceEl.oninput = () => { force = +forceEl.value; forceVal.textContent = forceEl.value; };
+  nearEl.oninput = () => {
+    nearFrac = +nearEl.value / 100;
+    nearVal.textContent = nearEl.value;
+  };
+  speedEl.oninput = () => {
+    simSpeed = +speedEl.value / 100;
+    speedVal.textContent = speedEl.value;
+  };
   bgEl.oninput = () => { bg = bgEl.value; };
-  document.getElementById('clearBtn').onclick = () => { particles = []; countVal.textContent = '0'; };
+
+  document.getElementById('clearBtn').onclick = () => {
+    particles = [];
+    countVal.textContent = '0';
+    countEl.value = '0';
+    const { cx, cy } = bhCenter();
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    drawHorizon(cx, cy);
+  };
   document.getElementById('resetBtn').onclick = () => {
-    particles = createParticles(+countEl.value, W, H);
+    if (+countEl.value < 40) {
+      countEl.value = '220';
+      countVal.textContent = '220';
+    }
+    const { cx, cy } = bhCenter();
+    particles = createParticles(+countEl.value, cx, cy, W, H, nearFrac);
     countVal.textContent = String(particles.length);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
   };
   document.getElementById('shotBtn').onclick = () => {
     const a = document.createElement('a');
-    a.download = 'blackhole-' + Date.now() + '.png';
+    a.download = 'schwarzschild-null-' + Date.now() + '.png';
     a.href = canvas.toDataURL('image/png');
     a.click();
   };
 
-  function step(dt) {
-    const mx = mouse.active ? mouse.x : W * 0.5;
-    const my = mouse.active ? mouse.y : H * 0.5;
-    const attractOn = mouse.active ? 1 : 0.3;
-    const G = force * 42 * attractOn;
-    const fMax = force * 3.2 * attractOn;
-    let orbN = countOrbiters(particles);
-
-    if (mouse.active && orbN < MAX_ORBITERS) {
-      orbitInject += dt;
-      if (orbitInject > 1.2 && particles.length > 0) {
-        orbitInject = 0;
-        const idx = (Math.random() * particles.length) | 0;
-        const o = makeOrbiter(mx, my, W, H);
-        if (o) { particles[idx] = o; orbN++; }
-      }
-    }
-
-    const next = new Array(particles.length);
-    for (let i = 0; i < particles.length; i++) {
-      let p = particles[i];
-      const dx = mx - p.x, dy = my - p.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4;
-      const tx = -dy / dist, ty = dx / dist;
-      const rx = (p.x - mx) / dist, ry = (p.y - my) / dist;
-      const targetR = p.orbitR || Rgamma;
-      const ringDist = Math.abs(dist - targetR);
-      let inRing = attractOn > 0.5 && ringDist < ringHalf && (p.ringT || 0) > 0.05;
-
-      // Also capture near-band particles occasionally into orbit if under cap
-      if (!inRing && attractOn > 0.5 && orbN < MAX_ORBITERS && Math.abs(dist - Rgamma) < ringHalf * 0.5 && Math.random() < 0.002) {
-        p.ringT = 0.35;
-        p.orbitR = dist;
-        p.orbitSign = (p.vx * tx + p.vy * ty) >= 0 ? 1 : -1;
-        inRing = true;
-        orbN++;
-      }
-
-      if (inRing && orbN > MAX_ORBITERS) {
-        p.vx += rx * 1.0;
-        p.ringT = 0;
-        p.trail = [];
-        inRing = false;
-        orbN--;
-      }
-
-      const gScale = inRing ? 0.08 : 1;
-      const { fx, fy } = plummerToward(dx, dy, G * gScale, fMax * gScale);
-      p.vx += fx * dt;
-      p.vy += fy * dt;
-
-      if (inRing) {
-        const w = 1 - Math.min(1, ringDist / ringHalf);
-        const err = dist - targetR;
-        p.vx -= rx * err * 2.4 * w;
-        p.vy -= ry * err * 2.4 * w;
-        const sign = p.orbitSign || 1;
-        p.vx = p.vx * (1 - 0.78 * w) + tx * ORBIT_V * sign * (0.78 * w);
-        p.vy = p.vy * (1 - 0.78 * w) + ty * ORBIT_V * sign * (0.78 * w);
-        const vRad = p.vx * rx + p.vy * ry;
-        p.vx -= rx * vRad * (0.9 * w);
-        p.vy -= ry * vRad * (0.9 * w);
-        p.ringT = Math.min(1, (p.ringT || 0) + dt * 1.5);
-        // Push trail history for long readable arc
-        if (!p.trail) p.trail = [];
-        p.trail.push({ x: p.x, y: p.y });
-        if (p.trail.length > TRAIL_LEN) p.trail.shift();
-        if (Math.random() < 0.015 * w) {
-          p.vx += rx * (Math.random() - 0.2) * 1.8;
-          p.ringT = 0;
-          p.trail = [];
-        }
-      } else {
-        p.ringT = Math.max(0, (p.ringT || 0) - dt * 2.5);
-        if (p.trail && p.trail.length) p.trail.shift();
-      }
-
-      p.vx *= inRing ? 0.995 : 0.988;
-      p.vy *= inRing ? 0.995 : 0.988;
-      clampSpeed(p);
-      p.x += p.vx * dt * 60; p.y += p.vy * dt * 60;
-      if (p.x < -20) p.x = W + 20; else if (p.x > W + 20) p.x = -20;
-      if (p.y < -20) p.y = H + 20; else if (p.y > H + 20) p.y = -20;
-
-      if (mouse.active && Math.hypot(p.x - mx, p.y - my) < Rh * 0.92) {
-        p = spawnOutside(mx, my, W, H, orbN);
-        if ((p.ringT || 0) > 0.2) orbN++;
-      }
-      next[i] = p;
-    }
-    particles = next;
+  function offscreenFar(X, Y) {
+    const lim = Math.max(W, H) * 0.85;
+    return Math.abs(X) > lim || Math.abs(Y) > lim;
   }
 
-  function drawHole(mx, my) {
+  function integrateParticle(p, cx, cy, dt) {
+    // Purely radial force from Veff → L conserved; integrate with substeps near BH
+    const maxSub = 8;
+    let rem = dt;
+    for (let s = 0; s < maxSub && rem > 1e-8; s++) {
+      const X = p.x - cx;
+      const Y = p.y - cy;
+      const r = Math.hypot(X, Y);
+      if (r < Rh) {
+        p.alive = false;
+        return;
+      }
+      // adaptive substep: smaller near photon sphere / horizon
+      const near = r < 2.5 * Rh;
+      const h = near ? Math.min(rem, dt / 4) : rem;
+
+      // Recompute L from state (should stay ~constant); use stored L for force
+      // L = X vy - Y vx
+      p.L = X * p.vy - Y * p.vx;
+
+      const ar = rDdot(r, p.L); // radial accel ṙ̈
+      const invr = 1 / r;
+      const ax = ar * X * invr;
+      const ay = ar * Y * invr;
+
+      // semi-implicit Euler
+      p.vx += ax * h;
+      p.vy += ay * h;
+      p.x += p.vx * h;
+      p.y += p.vy * h;
+
+      rem -= h;
+    }
+
+    const X = p.x - cx;
+    const Y = p.y - cy;
+    const r = Math.hypot(X, Y);
+    if (r < Rh || offscreenFar(X, Y)) p.alive = false;
+  }
+
+  function step(dt) {
+    const { cx, cy } = bhCenter();
+    const h = dt * simSpeed * 60; // scale so speed~1 feels natural
+    const nearF = nearFrac;
+
+    for (let i = 0; i < particles.length; i++) {
+      let p = particles[i];
+      integrateParticle(p, cx, cy, h);
+
+      if (!p.alive) {
+        p = spawnBeam(cx, cy, W, H, nearF);
+        particles[i] = p;
+        continue;
+      }
+
+      if (!p.trail) p.trail = [];
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > TRAIL_LEN) p.trail.shift();
+    }
+  }
+
+  function drawHorizon(cx, cy) {
+    // Soft black disk at horizon ONLY — no stroke/glow at Rγ
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rh * 1.15);
+    g.addColorStop(0, 'rgba(0,0,0,0.98)');
+    g.addColorStop(0.72, 'rgba(0,0,0,0.88)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.globalCompositeOperation = 'source-over';
-    const softGlow = ctx.createRadialGradient(mx, my, 0, mx, my, Rh * 1.2);
-    softGlow.addColorStop(0, 'rgba(0,0,0,0.92)');
-    softGlow.addColorStop(0.75, 'rgba(0,0,0,0.7)');
-    softGlow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = softGlow;
-    ctx.beginPath(); ctx.arc(mx, my, Rh * 1.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rh * 1.15, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function draw() {
-    const r = parseInt(bg.slice(1, 3), 16), g = parseInt(bg.slice(3, 5), 16), b = parseInt(bg.slice(5, 7), 16);
+    const r = parseInt(bg.slice(1, 3), 16);
+    const g = parseInt(bg.slice(3, 5), 16);
+    const b = parseInt(bg.slice(5, 7), 16);
+    // Fade canvas so trails accumulate a luminous band over tens of seconds
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = `rgba(${r},${g},${b},0.3)`;
+    ctx.fillStyle = `rgba(${r},${g},${b},${FADE})`;
     ctx.fillRect(0, 0, W, H);
 
-    const mx = mouse.active ? mouse.x : W * 0.5;
-    const my = mouse.active ? mouse.y : H * 0.5;
-    if (mouse.active) drawHole(mx, my);
+    const { cx, cy } = bhCenter();
 
-    // Field particles — additive OK
-    ctx.globalCompositeOperation = 'lighter';
+    // Trails (source-over, soft) — near-critical windings build the ring
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     for (const p of particles) {
-      if ((p.ringT || 0) > 0.2) continue;
-      const speed = Math.hypot(p.vx, p.vy);
-      const dist = mouse.active ? Math.hypot(mx - p.x, my - p.y) : 200;
-      const s = Math.min(speed / VMAX, 1);
-      const d = Math.max(0, 1 - dist / 380);
-      const t = Math.min(1, s * 0.5 + d * 0.5);
-      const col = `hsl(${210 - t * 210} ${70 + t * 25}% ${45 + t * 25}%)`;
-      const len = Math.min(8, 1.5 + speed * 1.0);
-      const nx = speed > 0.04 ? p.vx / speed : 0, ny = speed > 0.04 ? p.vy / speed : 0;
-      ctx.beginPath(); ctx.strokeStyle = col; ctx.lineWidth = Math.max(0.4, p.r * 0.8); ctx.lineCap = 'round';
-      ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - nx * len, p.y - ny * len); ctx.stroke();
-      ctx.beginPath(); ctx.fillStyle = col; ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
-    }
-
-    // Orbiters — source-over history trails (no additive bloom → no stuck rim)
-    ctx.globalCompositeOperation = 'source-over';
-    for (const p of particles) {
-      if ((p.ringT || 0) <= 0.2) continue;
-      const trail = p.trail || [];
-      if (trail.length > 2) {
+      const trail = p.trail;
+      if (!trail || trail.length < 2) continue;
+      const col = colorForB(p.b);
+      const n = trail.length;
+      for (let i = 1; i < n; i++) {
+        const a = (i / n) * (0.22 + col.t * 0.45);
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(220, 140, 70, 0.55)';
-        ctx.lineWidth = 1.4;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.moveTo(trail[0].x, trail[0].y);
-        for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+        ctx.strokeStyle = `hsla(${col.h}, ${col.s}%, ${col.l}%, ${a})`;
+        ctx.lineWidth = 0.7 + col.t * 1.1;
+        ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
+        ctx.lineTo(trail[i].x, trail[i].y);
         ctx.stroke();
       }
-      ctx.beginPath();
-      ctx.fillStyle = 'rgba(240, 170, 90, 0.9)';
-      ctx.arc(p.x, p.y, p.r * 1.1, 0, Math.PI * 2);
-      ctx.fill();
     }
+
+    // Particle heads
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of particles) {
+      const col = colorForB(p.b);
+      const speed = Math.hypot(p.vx, p.vy);
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${col.h}, ${col.s}%, ${Math.min(78, col.l + 10)}%, ${0.55 + col.t * 0.4})`;
+      ctx.arc(p.x, p.y, p.r * (0.9 + col.t * 0.4), 0, Math.PI * 2);
+      ctx.fill();
+      // short motion tick
+      if (speed > 0.05) {
+        const nx = p.vx / speed, ny = p.vy / speed;
+        const len = Math.min(10, 2 + speed * 1.2);
+        ctx.beginPath();
+        ctx.strokeStyle = `hsla(${col.h}, ${col.s}%, ${col.l}%, 0.55)`;
+        ctx.lineWidth = Math.max(0.5, p.r * 0.7);
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - nx * len, p.y - ny * len);
+        ctx.stroke();
+      }
+    }
+
+    drawHorizon(cx, cy);
   }
 
   function frame(t) {
     const dt = Math.min(0.033, (t - lastT) / 1000);
     lastT = t;
-    step(dt); draw();
-    frames++; fpsAcc += dt;
+    step(dt);
+    draw();
+    frames++;
+    fpsAcc += dt;
     if (fpsAcc >= 0.4) {
       fpsEl.textContent = Math.round(frames / fpsAcc) + ' fps · ' + particles.length + ' p';
-      frames = 0; fpsAcc = 0;
+      frames = 0;
+      fpsAcc = 0;
     }
     requestAnimationFrame(frame);
   }
 
   resize();
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-  particles = createParticles(+countEl.value, W, H);
-  mouse.x = W * 0.5; mouse.y = H * 0.5;
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  {
+    const { cx, cy } = bhCenter();
+    particles = createParticles(+countEl.value, cx, cy, W, H, nearFrac);
+    drawHorizon(cx, cy);
+  }
   requestAnimationFrame(frame);
+
+  // Expose math for debugging / consistency with smoke test
+  window.__BH__ = { M, Rs, Rh, Rgamma, bc, rDdot };
 })();
 </script>
 </body>
