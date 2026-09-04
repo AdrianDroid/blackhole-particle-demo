@@ -5,231 +5,102 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Schwarzschild Null Geodesic — Emergent Photon Ring</title>
 <style>
-  :root {
-    --bg: #0a0a12;
-    --panel: rgba(18, 18, 28, 0.85);
-    --text: #e8e8f0;
-    --muted: #9898b0;
-    --accent: #7c5cff;
-    --border: rgba(255,255,255,0.08);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--text);
-    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  }
-  canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: crosshair;
-    touch-action: none;
-  }
-  .panel {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 10;
-    width: min(320px, calc(100vw - 32px));
-    padding: 14px 16px 16px;
-    background: var(--panel);
-    backdrop-filter: blur(14px);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  }
-  .panel h1 {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-  }
-  .row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .row label {
-    flex: 0 0 88px;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .row input[type="range"] {
-    flex: 1;
-    accent-color: var(--accent);
-  }
-  .row .val {
-    flex: 0 0 40px;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    color: var(--text);
-  }
-  .row input[type="color"] {
-    width: 36px;
-    height: 28px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    padding: 0;
-  }
-  .btns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 6px;
-  }
-  button {
-    flex: 1 1 auto;
-    min-width: 80px;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: rgba(255,255,255,0.06);
-    color: var(--text);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  button:hover {
-    background: rgba(124, 92, 255, 0.25);
-    border-color: rgba(124, 92, 255, 0.45);
-  }
-  button.primary {
-    background: rgba(124, 92, 255, 0.35);
-    border-color: rgba(124, 92, 255, 0.55);
-  }
-  .hint {
-    margin-top: 10px;
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.45;
-  }
-  .fps {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 10;
-    font-size: 11px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 10px;
-    backdrop-filter: blur(10px);
-  }
+:root{--bg:#0a0a12;--panel:rgba(18,18,28,.85);--text:#e8e8f0;--muted:#9898b0;--accent:#7c5cff;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}
+canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.panel{position:fixed;top:16px;left:16px;z-index:10;width:min(320px,calc(100vw - 32px));padding:14px 16px 16px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.panel h1{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.row label{flex:0 0 88px;font-size:12px;color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent)}
+.row .val{flex:0 0 40px;font-size:12px;font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=color]{width:36px;height:28px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;padding:0}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+button{flex:1 1 auto;min-width:80px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.06);color:var(--text);font-size:12px;font-weight:500;cursor:pointer}
+button:hover{background:rgba(124,92,255,.25);border-color:rgba(124,92,255,.45)}
+button.primary{background:rgba(124,92,255,.35);border-color:rgba(124,92,255,.55)}
+.hint{margin-top:10px;font-size:11px;color:var(--muted);line-height:1.45}
+.fps{position:fixed;top:16px;right:16px;z-index:10;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 10px;backdrop-filter:blur(10px);max-width:280px;text-align:right}
 </style>
 </head>
 <body>
-  <div class="panel">
-    <h1>Null Geodesic BH</h1>
-    <div class="row">
-      <label for="count">Particles</label>
-      <input id="count" type="range" min="40" max="800" step="10" value="220" />
-      <span class="val" id="countVal">220</span>
-    </div>
-    <div class="row">
-      <label for="nearCrit" title="Fraction of beams seeded with |b| ≈ bc">Near-crit %</label>
-      <input id="nearCrit" type="range" min="40" max="95" step="1" value="72" />
-      <span class="val" id="nearCritVal">72</span>
-    </div>
-    <div class="row">
-      <label for="simSpeed" title="Integration time scale">Sim speed</label>
-      <input id="simSpeed" type="range" min="20" max="160" step="5" value="70" />
-      <span class="val" id="simSpeedVal">70</span>
-    </div>
-    <div class="row">
-      <label for="bg">Background</label>
-      <input id="bg" type="color" value="#0a0a12" />
-    </div>
-    <div class="btns">
-      <button type="button" id="clearBtn">Clear</button>
-      <button type="button" id="resetBtn">Reset</button>
-      <button type="button" id="shotBtn" class="primary">Download PNG</button>
-    </div>
-    <p class="hint">Fixed BH at center. Photon ring emerges only from near-critical null paths (b ≈ bc) winding near Rγ = 3M — no painted ring, no orbit seeds.</p>
+<div class="panel">
+  <h1>Null Geodesic BH v1.0</h1>
+  <div class="row"><label for="count">Particles</label><input id="count" type="range" min="40" max="600" step="10" value="180" /><span class="val" id="countVal">180</span></div>
+  <div class="row"><label for="nearCrit" title="Fraction with |b|≈bc">Near-crit %</label><input id="nearCrit" type="range" min="40" max="95" step="1" value="78" /><span class="val" id="nearCritVal">78</span></div>
+  <div class="row"><label for="simSpeed" title="Affine-time scale">Sim speed</label><input id="simSpeed" type="range" min="15" max="120" step="5" value="45" /><span class="val" id="simSpeedVal">45</span></div>
+  <div class="row"><label for="bg">Background</label><input id="bg" type="color" value="#0a0a12" /></div>
+  <div class="btns">
+    <button type="button" id="clearBtn">Clear</button>
+    <button type="button" id="resetBtn">Reset</button>
+    <button type="button" id="shotBtn" class="primary">Download PNG</button>
   </div>
-  <div class="fps" id="fps">— fps</div>
-  <canvas id="c"></canvas>
+  <p class="hint">Fixed BH · RK4 null geodesics · E²=ṙ²+Veff · ring only from near-bc windings at Rγ=3M. No painted ring, no orbit seeds.</p>
+</div>
+<div class="fps" id="fps">— fps</div>
+<canvas id="c"></canvas>
 <script>
 (() => {
-  // --- Schwarzschild null analog (Math Master) ---
-  // Units: Rh = Rs = 2M, Rγ = 3M = 1.5 Rh
-  // Conserved L = X*vy - Y*vx (coords relative to BH)
-  // Veff(r) = L² (1 - Rs/r) / r²
-  // ṙ̈ = -∂Veff/∂r = L²/r⁴ (2r - 3 Rs)
-  // φ̇ = L / r²
-  // Absorb if r < Rh
-  // bc = 3√3 M
+  // Schwarzschild null analog (Math Master Veff; EOM uses geodesic ½ factor so E²=ṙ²+Veff is conserved)
+  // Rh=Rs=2M, Rγ=3M, Veff=L²(1-Rs/r)/r²
+  // ṙ̈ = −½ ∂Veff/∂r = ½ L²/r⁴ (2r−3Rs), φ̇=L/r²
+  // bc=3√3 M; b<bc capture; b>bc scatter; b≈bc windings → emergent ring
 
-  const M = 40;                 // geometric mass in px
-  const Rs = 2 * M;             // Rh = Rs
+  const M = 36;
+  const Rs = 2 * M;
   const Rh = Rs;
-  const Rgamma = 3 * M;         // unstable photon orbit
+  const Rgamma = 3 * M;
   const bc = 3 * Math.sqrt(3) * M;
-  const E0 = 2.4;               // asymptotic "energy" / speed scale
-  const TRAIL_LEN = 64;
-  const FADE = 0.085;           // canvas fade per frame → trails accumulate ~10–30s
+  const E0 = 1.0;
+  const TRAIL_LEN = 100;
+  const FADE = 0.045;
 
+  function veff(r, L) {
+    if (r <= Rs * 1.001) return Infinity;
+    return (L * L) * (1 - Rs / r) / (r * r);
+  }
+
+  // Geodesic second-order form consistent with ṙ² + Veff = E²
   function rDdot(r, L) {
-    // ṙ̈ = L²/r⁴ (2r - 3 Rs)
     if (r < 1e-6) return 0;
-    const L2 = L * L;
     const r2 = r * r;
-    const r4 = r2 * r2;
-    return (L2 / r4) * (2 * r - 3 * Rs);
+    return 0.5 * (L * L) / (r2 * r2) * (2 * r - 3 * Rs);
+  }
+
+  function energy2(r, vr, L) {
+    return vr * vr + veff(r, L);
   }
 
   function sampleImpactParam(nearFrac) {
     const u = Math.random();
     const sign = Math.random() < 0.5 ? 1 : -1;
     let bAbs;
-    if (u < nearFrac) {
-      // mostly near-critical: [0.95, 1.05] bc
-      bAbs = (0.95 + Math.random() * 0.10) * bc;
-    } else if (u < nearFrac + (1 - nearFrac) * 0.45) {
-      // clearly capture: well below bc
-      bAbs = (0.35 + Math.random() * 0.50) * bc;
-    } else {
-      // clearly scatter: well above bc
-      bAbs = (1.12 + Math.random() * 0.70) * bc;
-    }
+    if (u < nearFrac) bAbs = (0.97 + Math.random() * 0.06) * bc;
+    else if (u < nearFrac + (1 - nearFrac) * 0.5) bAbs = (0.40 + Math.random() * 0.45) * bc;
+    else bAbs = (1.15 + Math.random() * 0.70) * bc;
     return sign * bAbs;
   }
 
   function spawnBeam(cx, cy, W, H, nearFrac) {
     const b = sampleImpactParam(nearFrac);
-    // Start far left of BH as parallel beam: X=-r0, Y=b, vx≈+E, vy=0
-    const margin = Math.max(W, H) * 0.55;
-    const r0 = Math.max(margin, 8 * Rh);
-    const X = -r0;
-    const Y = b;
-    const E = E0 * (0.92 + Math.random() * 0.16);
-    const vx = E;
-    const vy = 0;
-    // L = X*vy - Y*vx = -b E  →  |b| = |L|/E
-    const L = X * vy - Y * vx;
+    const r0x = Math.max(7.5 * Rh, Math.min(W, H) * 0.42);
+    const E = E0;
+    const L = -b * E;
+    const r = Math.hypot(r0x, b);
+    const phi = Math.atan2(b, -r0x);
+    const vr = (-r0x * E) / r;
     return {
-      x: cx + X,
-      y: cy + Y,
-      vx,
-      vy,
-      L,
-      b,
-      E,
-      r: 1.1 + Math.random() * 0.9,
+      r, phi, vr, L, b, E,
+      E2: energy2(r, vr, L),
       trail: [],
       alive: true,
+      size: 0.9 + Math.random() * 0.7,
     };
+  }
+
+  function toCart(p, cx, cy) {
+    return { x: cx + p.r * Math.cos(p.phi), y: cy + p.r * Math.sin(p.phi) };
   }
 
   function createParticles(n, cx, cy, W, H, nearFrac) {
@@ -239,14 +110,25 @@
   }
 
   function colorForB(b) {
-    // warmer when |b - bc| is small
     const db = Math.abs(Math.abs(b) - bc) / bc;
-    const t = Math.max(0, 1 - db / 0.18); // near-critical → 1
-    // cool blue → warm gold/orange
-    const h = 210 - t * 175;   // 210 → 35
-    const s = 55 + t * 40;
-    const l = 48 + t * 22;
-    return { h, s, l, t };
+    const t = Math.max(0, 1 - db / 0.14);
+    return { h: 210 - t * 175, s: 55 + t * 40, l: 48 + t * 22, t };
+  }
+
+  function deriv(r, phi, vr, L) {
+    return [vr, L / (r * r), rDdot(r, L)];
+  }
+
+  function rk4Step(p, h) {
+    const L = p.L;
+    const { r, phi, vr } = p;
+    const k1 = deriv(r, phi, vr, L);
+    const k2 = deriv(r + 0.5 * h * k1[0], phi + 0.5 * h * k1[1], vr + 0.5 * h * k1[2], L);
+    const k3 = deriv(r + 0.5 * h * k2[0], phi + 0.5 * h * k2[1], vr + 0.5 * h * k2[2], L);
+    const k4 = deriv(r + h * k3[0], phi + h * k3[1], vr + h * k3[2], L);
+    p.r   = r   + (h / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+    p.phi = phi + (h / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+    p.vr  = vr  + (h / 6) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]);
   }
 
   const canvas = document.getElementById('c');
@@ -262,13 +144,12 @@
 
   let W = 0, H = 0, dpr = 1, particles = [];
   let nearFrac = +nearEl.value / 100;
-  let simSpeed = +speedEl.value / 100; // multiplies dt
+  let simSpeed = +speedEl.value / 100;
   let bg = bgEl.value;
   let lastT = performance.now(), frames = 0, fpsAcc = 0;
+  let driftMax = 0, driftAcc = 0, driftN = 0;
 
-  function bhCenter() {
-    return { cx: W * 0.5, cy: H * 0.5 };
-  }
+  function bhCenter() { return { cx: W * 0.5, cy: H * 0.5 }; }
 
   function resize() {
     dpr = Math.min(devicePixelRatio || 1, 2);
@@ -279,7 +160,6 @@
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-
   addEventListener('resize', resize);
 
   countEl.oninput = () => {
@@ -289,14 +169,8 @@
     if (particles.length > n) particles.length = n;
     while (particles.length < n) particles.push(spawnBeam(cx, cy, W, H, nearFrac));
   };
-  nearEl.oninput = () => {
-    nearFrac = +nearEl.value / 100;
-    nearVal.textContent = nearEl.value;
-  };
-  speedEl.oninput = () => {
-    simSpeed = +speedEl.value / 100;
-    speedVal.textContent = speedEl.value;
-  };
+  nearEl.oninput = () => { nearFrac = +nearEl.value / 100; nearVal.textContent = nearEl.value; };
+  speedEl.oninput = () => { simSpeed = +speedEl.value / 100; speedVal.textContent = speedEl.value; };
   bgEl.oninput = () => { bg = bgEl.value; };
 
   document.getElementById('clearBtn').onclick = () => {
@@ -304,20 +178,16 @@
     countVal.textContent = '0';
     countEl.value = '0';
     const { cx, cy } = bhCenter();
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     drawHorizon(cx, cy);
   };
   document.getElementById('resetBtn').onclick = () => {
-    if (+countEl.value < 40) {
-      countEl.value = '220';
-      countVal.textContent = '220';
-    }
+    if (+countEl.value < 40) { countEl.value = '180'; countVal.textContent = '180'; }
     const { cx, cy } = bhCenter();
     particles = createParticles(+countEl.value, cx, cy, W, H, nearFrac);
     countVal.textContent = String(particles.length);
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
+    driftMax = 0; driftAcc = 0; driftN = 0;
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   };
   document.getElementById('shotBtn').onclick = () => {
     const a = document.createElement('a');
@@ -326,135 +196,99 @@
     a.click();
   };
 
-  function offscreenFar(X, Y) {
-    const lim = Math.max(W, H) * 0.85;
-    return Math.abs(X) > lim || Math.abs(Y) > lim;
-  }
-
-  function integrateParticle(p, cx, cy, dt) {
-    // Purely radial force from Veff → L conserved; integrate with substeps near BH
-    const maxSub = 8;
+  function integrateParticle(p, dt) {
     let rem = dt;
-    for (let s = 0; s < maxSub && rem > 1e-8; s++) {
-      const X = p.x - cx;
-      const Y = p.y - cy;
-      const r = Math.hypot(X, Y);
-      if (r < Rh) {
-        p.alive = false;
-        return;
+    const maxSub = 32;
+    for (let s = 0; s < maxSub && rem > 1e-10; s++) {
+      if (p.r < Rh) { p.alive = false; return; }
+      const nearH = p.r < 5 * M;
+      const crit = Math.abs(p.r - Rgamma) < 0.8 * M;
+      let h = rem;
+      if (crit) h = Math.min(rem, dt / 16);
+      else if (nearH) h = Math.min(rem, dt / 6);
+      rk4Step(p, h);
+      if (!(p.r > 0) || !Number.isFinite(p.r) || !Number.isFinite(p.vr)) {
+        p.alive = false; return;
       }
-      // adaptive substep: smaller near photon sphere / horizon
-      const near = r < 2.5 * Rh;
-      const h = near ? Math.min(rem, dt / 4) : rem;
-
-      // Recompute L from state (should stay ~constant); use stored L for force
-      // L = X vy - Y vx
-      p.L = X * p.vy - Y * p.vx;
-
-      const ar = rDdot(r, p.L); // radial accel ṙ̈
-      const invr = 1 / r;
-      const ax = ar * X * invr;
-      const ay = ar * Y * invr;
-
-      // semi-implicit Euler
-      p.vx += ax * h;
-      p.vy += ay * h;
-      p.x += p.vx * h;
-      p.y += p.vy * h;
-
       rem -= h;
     }
-
-    const X = p.x - cx;
-    const Y = p.y - cy;
-    const r = Math.hypot(X, Y);
-    if (r < Rh || offscreenFar(X, Y)) p.alive = false;
+    if (p.r < Rh || p.r > Math.max(W, H) * 0.95) p.alive = false;
   }
 
   function step(dt) {
     const { cx, cy } = bhCenter();
-    const h = dt * simSpeed * 60; // scale so speed~1 feels natural
-    const nearF = nearFrac;
-
+    const h = dt * simSpeed * 22;
     for (let i = 0; i < particles.length; i++) {
       let p = particles[i];
-      integrateParticle(p, cx, cy, h);
-
+      integrateParticle(p, h);
       if (!p.alive) {
-        p = spawnBeam(cx, cy, W, H, nearF);
+        p = spawnBeam(cx, cy, W, H, nearFrac);
         particles[i] = p;
         continue;
       }
-
+      if (p.r > Rs * 1.05) {
+        const e2 = energy2(p.r, p.vr, p.L);
+        if (p.E2 > 1e-12 && Number.isFinite(e2)) {
+          const d = Math.abs(e2 - p.E2) / p.E2;
+          driftAcc += d; driftN++;
+          if (d > driftMax) driftMax = d;
+        }
+      }
+      const c = toCart(p, cx, cy);
       if (!p.trail) p.trail = [];
-      p.trail.push({ x: p.x, y: p.y });
+      p.trail.push({ x: c.x, y: c.y });
       if (p.trail.length > TRAIL_LEN) p.trail.shift();
     }
   }
 
   function drawHorizon(cx, cy) {
-    // Soft black disk at horizon ONLY — no stroke/glow at Rγ
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rh * 1.15);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rh * 1.1);
     g.addColorStop(0, 'rgba(0,0,0,0.98)');
-    g.addColorStop(0.72, 'rgba(0,0,0,0.88)');
+    g.addColorStop(0.78, 'rgba(0,0,0,0.86)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(cx, cy, Rh * 1.15, 0, Math.PI * 2);
+    ctx.arc(cx, cy, Rh * 1.1, 0, Math.PI * 2);
     ctx.fill();
   }
 
   function draw() {
-    const r = parseInt(bg.slice(1, 3), 16);
-    const g = parseInt(bg.slice(3, 5), 16);
-    const b = parseInt(bg.slice(5, 7), 16);
-    // Fade canvas so trails accumulate a luminous band over tens of seconds
+    const rr = parseInt(bg.slice(1, 3), 16);
+    const gg = parseInt(bg.slice(3, 5), 16);
+    const bb = parseInt(bg.slice(5, 7), 16);
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = `rgba(${r},${g},${b},${FADE})`;
+    ctx.fillStyle = `rgba(${rr},${gg},${bb},${FADE})`;
     ctx.fillRect(0, 0, W, H);
 
     const { cx, cy } = bhCenter();
-
-    // Trails (source-over, soft) — near-critical windings build the ring
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
     for (const p of particles) {
       const trail = p.trail;
       if (!trail || trail.length < 2) continue;
       const col = colorForB(p.b);
       const n = trail.length;
       for (let i = 1; i < n; i++) {
-        const a = (i / n) * (0.22 + col.t * 0.45);
+        const a = (i / n) * (0.16 + col.t * 0.55);
         ctx.beginPath();
-        ctx.strokeStyle = `hsla(${col.h}, ${col.s}%, ${col.l}%, ${a})`;
-        ctx.lineWidth = 0.7 + col.t * 1.1;
+        ctx.strokeStyle = `hsla(${col.h},${col.s}%,${col.l}%,${a})`;
+        ctx.lineWidth = 0.6 + col.t * 1.2;
         ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
         ctx.lineTo(trail[i].x, trail[i].y);
         ctx.stroke();
       }
     }
 
-    // Particle heads
     ctx.globalCompositeOperation = 'lighter';
     for (const p of particles) {
       const col = colorForB(p.b);
-      const speed = Math.hypot(p.vx, p.vy);
+      const c = toCart(p, cx, cy);
       ctx.beginPath();
-      ctx.fillStyle = `hsla(${col.h}, ${col.s}%, ${Math.min(78, col.l + 10)}%, ${0.55 + col.t * 0.4})`;
-      ctx.arc(p.x, p.y, p.r * (0.9 + col.t * 0.4), 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${col.h},${col.s}%,${Math.min(78, col.l + 8)}%,${0.45 + col.t * 0.5})`;
+      ctx.arc(c.x, c.y, p.size * (0.8 + col.t * 0.4), 0, Math.PI * 2);
       ctx.fill();
-      // short motion tick
-      if (speed > 0.05) {
-        const nx = p.vx / speed, ny = p.vy / speed;
-        const len = Math.min(10, 2 + speed * 1.2);
-        ctx.beginPath();
-        ctx.strokeStyle = `hsla(${col.h}, ${col.s}%, ${col.l}%, 0.55)`;
-        ctx.lineWidth = Math.max(0.5, p.r * 0.7);
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x - nx * len, p.y - ny * len);
-        ctx.stroke();
-      }
     }
 
     drawHorizon(cx, cy);
@@ -465,19 +299,20 @@
     lastT = t;
     step(dt);
     draw();
-    frames++;
-    fpsAcc += dt;
-    if (fpsAcc >= 0.4) {
-      fpsEl.textContent = Math.round(frames / fpsAcc) + ' fps · ' + particles.length + ' p';
-      frames = 0;
-      fpsAcc = 0;
+    frames++; fpsAcc += dt;
+    if (fpsAcc >= 0.5) {
+      const avg = driftN ? driftAcc / driftN : 0;
+      fpsEl.textContent =
+        Math.round(frames / fpsAcc) + ' fps · ' + particles.length +
+        ' p · ΔE² ' + avg.toExponential(1);
+      frames = 0; fpsAcc = 0;
+      driftAcc = 0; driftN = 0; driftMax = 0;
     }
     requestAnimationFrame(frame);
   }
 
   resize();
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   {
     const { cx, cy } = bhCenter();
     particles = createParticles(+countEl.value, cx, cy, W, H, nearFrac);
@@ -485,8 +320,7 @@
   }
   requestAnimationFrame(frame);
 
-  // Expose math for debugging / consistency with smoke test
-  window.__BH__ = { M, Rs, Rh, Rgamma, bc, rDdot };
+  window.__BH__ = { M, Rs, Rh, Rgamma, bc, rDdot, veff, energy2 };
 })();
 </script>
 </body>
